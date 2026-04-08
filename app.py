@@ -18,16 +18,31 @@ def index():
     conn = get_db()
     cursor = conn.cursor()
 
-    demandas = cursor.execute("""
-        SELECT * FROM demandas
-        ORDER BY 
-            CASE prioridade
-                WHEN 'Critica' THEN 1
-                WHEN 'Alta' THEN 2
-                WHEN 'Baixa' THEN 3
-            END,
-            datetime(data_criacao) ASC
-    """).fetchall()
+    filtro = request.args.get('prioridade')
+
+    if filtro and filtro != 'Todas':
+        demandas = cursor.execute("""
+            SELECT * FROM demandas
+            WHERE prioridade = ?
+            ORDER BY 
+                CASE prioridade
+                    WHEN 'Alta' THEN 1
+                    WHEN 'Media' THEN 2
+                    WHEN 'Baixa' THEN 3
+                END,
+                datetime(data_criacao) ASC
+        """, (filtro,)).fetchall()
+    else:
+        demandas = cursor.execute("""
+            SELECT * FROM demandas
+            ORDER BY 
+                CASE prioridade
+                    WHEN 'Alta' THEN 1
+                    WHEN 'Media' THEN 2
+                    WHEN 'Baixa' THEN 3
+                END,
+                datetime(data_criacao) ASC
+        """).fetchall()
 
     conn.close()
     return render_template('index.html', demandas=demandas)

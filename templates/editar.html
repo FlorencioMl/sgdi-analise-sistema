@@ -29,8 +29,8 @@
     <div>
         <label>Prioridade:</label><br>
         <select name="prioridade">
-            <option value="Critica" {% if demanda[5] == 'Critica' %}selected{% endif %}>Crítica</option>
             <option value="Alta" {% if demanda[5] == 'Alta' %}selected{% endif %}>Alta</option>
+            <option value="Media" {% if demanda[5] == 'Media' %}selected{% endif %}>Média</option>
             <option value="Baixa" {% if demanda[5] == 'Baixa' %}selected{% endif %}>Baixa</option>
         </select>
     </div>

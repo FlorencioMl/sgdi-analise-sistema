@@ -164,7 +164,7 @@ button:hover {
 }
 
 
-.critica, .alta, .baixa {
+.alta, .media, .baixa {
     padding: 5px 10px;
     border-radius: 8px;
     display: inline-block;
@@ -172,18 +172,18 @@ button:hover {
     font-weight: bold;
 }
 
-.critica {
+.alta {
     background-color: #e74c3c;
     color: white;
 }
 
-.alta {
-    background-color: #f1c40f;
+.media {
+    background-color: #f1c40f; 
     color: black;
 }
 
 .baixa {
-    background-color: #3498db;
+    background-color: #3498db; 
     color: white;
 }
 
