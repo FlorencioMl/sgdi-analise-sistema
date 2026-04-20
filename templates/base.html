@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SGDI - Sistema de Gestão de Demandas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SGDI</h1>
+
+        <div class="menu">
+            {% if session.usuario_id %}
+                <a href="/">Início</a>
+                <a href="/nova_demanda">Nova Demanda</a>
+                <a href="/logout">Sair</a>
+
+                <form action="/buscar" method="GET" class="search-form">
+                    <input type="text" name="q" placeholder="Buscar por título ou usuário...">
+                    <button type="submit">🔍</button>
+                </form>
+
+                <span class="usuario-logado">
+                    👤 {{ session.usuario_nome }}
+                </span>
+            {% else %}
+                <a href="/login">Login</a>
+                <a href="/cadastro">Cadastro</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="footer">
+        <p>SGDI v2.0 - 2024</p>
+    </div>
+</body>
+</html>
