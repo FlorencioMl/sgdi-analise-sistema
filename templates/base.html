@@ -9,6 +9,7 @@
 </head>
 <body>
     <div class="header">
+<<<<<<< HEAD
         <h1>SGDI</h1>
 
         <div class="menu">
@@ -31,6 +32,20 @@
             {% endif %}
         </div>
     </div>
+=======
+    <h1>SGDI</h1>
+
+    <div class="menu">
+        <a href="/">Início</a>
+        <a href="/nova_demanda">Nova Demanda</a>
+
+        <form action="/buscar" method="GET" class="search-form">
+            <input type="text" name="q" placeholder="Buscar...">
+            <button type="submit">🔍</button>
+        </form>
+    </div>
+</div>
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -45,7 +60,11 @@
     </div>
 
     <div class="footer">
+<<<<<<< HEAD
         <p>SGDI v2.0 - 2024</p>
+=======
+        <p>SGDI v1.0 - 2024</p>
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
     </div>
 </body>
 </html>

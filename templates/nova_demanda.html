@@ -7,16 +7,25 @@
 
     <div>
         <label>Título:</label><br>
+<<<<<<< HEAD
         <input type="text" name="titulo" required>
+=======
+        <input type="text" name="titulo">
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
     </div>
     
     <div>
         <label>Descrição:</label><br>
+<<<<<<< HEAD
         <textarea name="descricao" rows="5" required></textarea>
+=======
+        <textarea name="descricao" rows="5"></textarea>
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
     </div>
     
     <div>
         <label>Solicitante:</label><br>
+<<<<<<< HEAD
         <select name="solicitante" required>
             {% for usuario in usuarios %}
                 <option value="{{ usuario['nome'] }}">
@@ -26,6 +35,12 @@
         </select>
     </div>
 
+=======
+        <input type="text" name="solicitante">
+    </div>
+
+   
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
     <div>
         <label>Prioridade:</label><br>
         <select name="prioridade">
@@ -38,9 +53,13 @@
     <br>
 
     <button type="submit">Salvar</button>
+<<<<<<< HEAD
     <a href="/">
         <button type="button">Cancelar</button>
     </a>
+=======
+    <a href="/"><button type="button">Cancelar</button></a>
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 
 </form>
 

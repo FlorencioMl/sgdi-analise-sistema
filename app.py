@@ -1,7 +1,13 @@
+<<<<<<< HEAD
 from flask import Flask, render_template, request, redirect, flash, session
 import sqlite3
 from datetime import datetime
 from functools import wraps
+=======
+from flask import Flask, render_template, request, redirect, flash
+import sqlite3
+from datetime import datetime
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 
 app = Flask(__name__)
 app.secret_key = '123456'
@@ -13,6 +19,7 @@ def get_db():
     return conn
 
 
+<<<<<<< HEAD
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -92,6 +99,10 @@ def logout():
 
 @app.route('/')
 @login_required
+=======
+
+@app.route('/')
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 def index():
     conn = get_db()
     cursor = conn.cursor()
@@ -125,6 +136,7 @@ def index():
     conn.close()
     return render_template('index.html', demandas=demandas)
 
+<<<<<<< HEAD
 @app.route('/nova_demanda', methods=['GET', 'POST'])
 @login_required
 def nova_demanda():
@@ -133,24 +145,39 @@ def nova_demanda():
 
     usuarios = cursor.execute("SELECT nome FROM usuarios").fetchall()
 
+=======
+
+
+@app.route('/nova_demanda', methods=['GET', 'POST'])
+def nova_demanda():
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
     if request.method == 'POST':
         titulo = request.form['titulo']
         descricao = request.form['descricao']
         solicitante = request.form['solicitante']
         prioridade = request.form.get('prioridade', 'Baixa')
 
+<<<<<<< HEAD
         cursor.execute(
             """
             INSERT INTO demandas
             (titulo, descricao, solicitante, data_criacao, prioridade)
             VALUES (?, ?, ?, ?, ?)
             """,
+=======
+        conn = get_db()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "INSERT INTO demandas (titulo, descricao, solicitante, data_criacao, prioridade) VALUES (?, ?, ?, ?, ?)",
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
             (titulo, descricao, solicitante, datetime.now(), prioridade)
         )
 
         conn.commit()
         conn.close()
 
+<<<<<<< HEAD
         flash('Demanda salva!')
         return redirect('/')
 
@@ -160,6 +187,16 @@ def nova_demanda():
 
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
+=======
+        flash('Salvo!')
+        return redirect('/')
+
+    return render_template('nova_demanda.html')
+
+
+
+@app.route('/editar/<int:id>', methods=['GET', 'POST'])
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 def editar(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -171,17 +208,24 @@ def editar(id):
         prioridade = request.form.get('prioridade', 'Baixa')
 
         cursor.execute(
+<<<<<<< HEAD
             """
             UPDATE demandas
             SET titulo=?, descricao=?, solicitante=?, prioridade=?
             WHERE id=?
             """,
+=======
+            "UPDATE demandas SET titulo=?, descricao=?, solicitante=?, prioridade=? WHERE id=?",
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
             (titulo, descricao, solicitante, prioridade, id)
         )
 
         conn.commit()
         conn.close()
+<<<<<<< HEAD
         flash('Demanda atualizada!')
+=======
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
         return redirect('/')
 
     demanda = cursor.execute(
@@ -189,6 +233,7 @@ def editar(id):
         (id,)
     ).fetchone()
 
+<<<<<<< HEAD
     usuarios = cursor.execute("SELECT nome FROM usuarios").fetchall()
 
     conn.close()
@@ -196,6 +241,14 @@ def editar(id):
 
 @app.route('/deletar/<int:id>')
 @login_required
+=======
+    conn.close()
+    return render_template('editar.html', demanda=demanda)
+
+
+
+@app.route('/deletar/<int:id>')
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 def deletar(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -208,8 +261,13 @@ def deletar(id):
     flash('Deletado!')
     return redirect('/')
 
+<<<<<<< HEAD
 @app.route('/buscar')
 @login_required
+=======
+
+@app.route('/buscar')
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 def buscar():
     termo = request.args.get('q')
 
@@ -217,20 +275,31 @@ def buscar():
     cursor = conn.cursor()
 
     resultados = cursor.execute(
+<<<<<<< HEAD
         """
         SELECT * FROM demandas
         WHERE titulo LIKE ?
         OR solicitante LIKE ?
         """,
         (f'%{termo}%', f'%{termo}%')
+=======
+        "SELECT * FROM demandas WHERE titulo LIKE ?",
+        (f'%{termo}%',)
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
     ).fetchall()
 
     conn.close()
 
     return render_template('index.html', demandas=resultados)
 
+<<<<<<< HEAD
 @app.route('/detalhes/<int:id>')
 @login_required
+=======
+
+
+@app.route('/detalhes/<int:id>')
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 def detalhes(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -249,21 +318,34 @@ def detalhes(id):
 
     return render_template('detalhes.html', demanda=demanda, comentarios=comentarios)
 
+<<<<<<< HEAD
 @app.route('/adicionar_comentario/<int:demanda_id>', methods=['POST'])
 @login_required
 def adicionar_comentario(demanda_id):
     comentario = request.form['comentario']
     autor = session['usuario_nome']
+=======
+
+
+@app.route('/adicionar_comentario/<int:demanda_id>', methods=['POST'])
+def adicionar_comentario(demanda_id):
+    comentario = request.form['comentario']
+    autor = request.form['autor']
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
 
     conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute(
+<<<<<<< HEAD
         """
         INSERT INTO comentarios
         (demanda_id, comentario, autor, data)
         VALUES (?, ?, ?, ?)
         """,
+=======
+        "INSERT INTO comentarios (demanda_id, comentario, autor, data) VALUES (?, ?, ?, ?)",
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
         (demanda_id, comentario, autor, datetime.now())
     )
 
@@ -273,5 +355,11 @@ def adicionar_comentario(demanda_id):
     return redirect(f'/detalhes/{demanda_id}')
 
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+<<<<<<< HEAD
+=======
+
+def calcular_prazo(data_inicio):
+    return "30 dias"
+
+
+>>>>>>> 6d693741b5327082f26f88cb4d6d3c8a2d364007
