@@ -99,7 +99,6 @@ def index():
         query += " AND solicitante LIKE ?"
         params.append(f'%{usuario}%')
 
-    # 🔥 ordenação correta
     query += """
     ORDER BY 
         CASE prioridade
@@ -228,7 +227,6 @@ def detalhes(id):
 
     conn.close()
 
-   
     data_formatada = datetime.strptime(
         demanda['data_criacao'],
         "%Y-%m-%d %H:%M:%S.%f"
@@ -262,6 +260,61 @@ def comentar(id):
     conn.close()
 
     return redirect(f'/detalhes/{id}')
+
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    conn = get_db()
+
+    # Total de demandas
+    total = conn.execute('SELECT COUNT(*) as total FROM demandas').fetchone()['total']
+
+    # Demandas por prioridade
+    por_prioridade = conn.execute(
+        'SELECT prioridade, COUNT(*) as qtd FROM demandas GROUP BY prioridade'
+    ).fetchall()
+
+    # Demandas por status (coluna opcional)
+    try:
+        por_status = conn.execute(
+            'SELECT status, COUNT(*) as qtd FROM demandas GROUP BY status'
+        ).fetchall()
+    except Exception:
+        por_status = []
+
+    # Últimas 5 demandas
+    recentes = conn.execute(
+        'SELECT * FROM demandas ORDER BY data_criacao DESC LIMIT 5'
+    ).fetchall()
+
+    # Top 5 solicitantes
+    por_solicitante = conn.execute(
+        'SELECT solicitante, COUNT(*) as qtd FROM demandas GROUP BY solicitante ORDER BY qtd DESC LIMIT 5'
+    ).fetchall()
+
+    # Demandas por mês (últimos 6 meses)
+    por_mes = conn.execute(
+        """
+        SELECT strftime('%Y-%m', data_criacao) as mes, COUNT(*) as qtd
+        FROM demandas
+        GROUP BY mes
+        ORDER BY mes DESC
+        LIMIT 6
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return render_template('dashboard.html',
+        total=total,
+        por_prioridade=por_prioridade,
+        por_status=por_status,
+        recentes=recentes,
+        por_solicitante=por_solicitante,
+        por_mes=list(reversed(por_mes))
+    )
 
 
 
