@@ -1,11 +1,16 @@
 import sqlite3
+import hashlib
+
+def hash_senha(senha):
+    return hashlib.sha256(senha.encode()).hexdigest()
 
 conn = sqlite3.connect('demandas.db')
 cursor = conn.cursor()
 
-cursor.execute("DROP TABLE IF EXISTS usuarios")
-cursor.execute("DROP TABLE IF EXISTS demandas")
+cursor.execute("DROP TABLE IF EXISTS api_tokens")
 cursor.execute("DROP TABLE IF EXISTS comentarios")
+cursor.execute("DROP TABLE IF EXISTS demandas")
+cursor.execute("DROP TABLE IF EXISTS usuarios")
 
 cursor.execute("""
 CREATE TABLE usuarios (
@@ -32,15 +37,28 @@ CREATE TABLE comentarios (
     demanda_id INTEGER,
     comentario TEXT,
     autor TEXT,
-    data TEXT
+    data TEXT,
+    FOREIGN KEY (demanda_id) REFERENCES demandas(id)
 )
 """)
 
+cursor.execute("""
+CREATE TABLE api_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER,
+    token TEXT UNIQUE,
+    criado_em TEXT,
+    ativo INTEGER DEFAULT 1,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+)
+""")
+
+# Senhas agora armazenadas como SHA-256
 usuarios = [
-    ('admin', '123'),
-    ('João Silva', '123'),
-    ('Maria Santos', '123'),
-    ('Pedro Costa', '123')
+    ('admin',         hash_senha('123')),
+    ('João Silva',    hash_senha('123')),
+    ('Maria Santos',  hash_senha('123')),
+    ('Pedro Costa',   hash_senha('123')),
 ]
 
 cursor.executemany("INSERT INTO usuarios (nome, senha) VALUES (?, ?)", usuarios)
@@ -48,4 +66,6 @@ cursor.executemany("INSERT INTO usuarios (nome, senha) VALUES (?, ?)", usuarios)
 conn.commit()
 conn.close()
 
-print("Banco criado!")
+print("Banco criado com sucesso!")
+print("Senhas armazenadas como SHA-256.")
+print("Tabela api_tokens criada.")

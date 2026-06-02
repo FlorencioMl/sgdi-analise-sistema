@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  .token-wrapper {
+    max-width: 640px;
+    margin: 3rem auto;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .token-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 2rem;
+  }
+
+  .token-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 0.3rem;
+  }
+
+  .token-sub {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 1.75rem;
+  }
+
+  .token-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    color: #1e293b;
+    word-break: break-all;
+    margin-bottom: 1rem;
+  }
+
+  .token-meta {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-gerar {
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 0.5rem;
+  }
+
+  .btn-gerar:hover { background: #6d28d9; }
+
+  .btn-revogar {
+    background: #fff;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-revogar:hover { background: #fef2f2; }
+
+  .no-token {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .flash-msg {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: #166534;
+    margin-bottom: 1.25rem;
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+  }
+
+  .docs-section {
+    margin-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1.5rem;
+  }
+
+  .docs-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 1rem;
+  }
+
+  .endpoint {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .method {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.72rem;
+    min-width: 52px;
+    text-align: center;
+  }
+
+  .get    { background: #dbeafe; color: #1e40af; }
+  .post   { background: #dcfce7; color: #166534; }
+  .put    { background: #fef3c7; color: #92400e; }
+  .delete { background: #fee2e2; color: #991b1b; }
+
+  .ep-path {
+    font-family: 'Courier New', monospace;
+    color: #1e293b;
+  }
+
+  .ep-desc {
+    color: #64748b;
+    margin-left: 4px;
+  }
+</style>
+
+<div class="token-wrapper">
+  <div class="token-card">
+    <div class="token-title">🔑 Meu Token de API</div>
+    <div class="token-sub">Use este token para autenticar requisições à API REST do SGDI.</div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash-msg">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if token %}
+      <div class="token-box">{{ token['token'] }}</div>
+      <div class="token-meta">Gerado em: {{ token['criado_em'] }} &nbsp;|&nbsp; Status: ativo</div>
+
+      <form method="POST" style="display:inline;">
+        <input type="hidden" name="acao" value="gerar">
+        <button class="btn-gerar" type="submit">↺ Regenerar Token</button>
+      </form>
+
+      <form method="POST" style="display:inline;" onsubmit="return confirm('Revogar token? Integrações existentes deixarão de funcionar.');">
+        <input type="hidden" name="acao" value="revogar">
+        <button class="btn-revogar" type="submit">✕ Revogar</button>
+      </form>
+
+    {% else %}
+      <div class="no-token">Você ainda não possui um token ativo.</div>
+      <form method="POST">
+        <input type="hidden" name="acao" value="gerar">
+        <button class="btn-gerar" type="submit">+ Gerar Token</button>
+      </form>
+    {% endif %}
+
+    <!-- DOCUMENTAÇÃO RÁPIDA -->
+    <div class="docs-section">
+      <div class="docs-title">📄 Endpoints disponíveis</div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.75rem 1rem;font-family:'Courier New',monospace;font-size:0.78rem;color:#475569;margin-bottom:1rem;">
+        Header obrigatório: <strong>X-API-Key: &lt;seu_token&gt;</strong>
+      </div>
+
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span><span class="ep-path">/api/v1/demandas</span><span class="ep-desc">— lista demandas (params: prioridade, solicitante, limit)</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span><span class="ep-path">/api/v1/demandas/&lt;id&gt;</span><span class="ep-desc">— detalhe com comentários</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span><span class="ep-path">/api/v1/demandas</span><span class="ep-desc">— cria demanda (JSON: titulo, descricao, solicitante, prioridade)</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method put">PUT</span>
+        <span><span class="ep-path">/api/v1/demandas/&lt;id&gt;</span><span class="ep-desc">— atualiza demanda</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <span><span class="ep-path">/api/v1/demandas/&lt;id&gt;</span><span class="ep-desc">— deleta demanda e comentários</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span><span class="ep-path">/api/v1/demandas/&lt;id&gt;/comentarios</span><span class="ep-desc">— lista comentários</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span><span class="ep-path">/api/v1/demandas/&lt;id&gt;/comentarios</span><span class="ep-desc">— adiciona comentário (JSON: comentario, autor)</span></span>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span><span class="ep-path">/api/v1/stats</span><span class="ep-desc">— indicadores gerenciais</span></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
