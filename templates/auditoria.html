@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  :root {
+    --dash-bg: #f0f2f7;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --text-primary: #1a202c;
+    --text-muted: #64748b;
+    --accent: #7c3aed;
+  }
+
+  .audit-wrapper {
+    background: var(--dash-bg);
+    min-height: 100vh;
+    padding: 2rem 2.5rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .audit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+  }
+
+  .audit-title { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+  .audit-sub   { font-size: 0.83rem; color: var(--text-muted); margin-top: 2px; }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .kpi {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    border-top: 3px solid var(--accent);
+  }
+
+  .kpi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+  .kpi-val   { font-size: 1.9rem; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+
+  /* FILTROS */
+  .filter-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .filter-card label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); display: block; margin-bottom: 4px; }
+
+  .filter-card input,
+  .filter-card select {
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    background: #f8fafc;
+    min-width: 140px;
+  }
+
+  .btn-filtrar {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-limpar {
+    background: #fff;
+    color: var(--text-muted);
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  /* TABELA */
+  .table-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .table-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.815rem;
+  }
+
+  .table-card th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    background: #f8fafc;
+    border-bottom: 1px solid var(--card-border);
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .table-card td {
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-primary);
+    vertical-align: top;
+  }
+
+  .table-card tr:last-child td { border-bottom: none; }
+  .table-card tr:hover td { background: #fafbff; }
+
+  .acao-badge {
+    display: inline-block;
+    padding: 0.18rem 0.55rem;
+    border-radius: 5px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* cores por grupo de ação */
+  .acao-login       { background: #dbeafe; color: #1e40af; }
+  .acao-logout      { background: #e0e7ff; color: #3730a3; }
+  .acao-login_falha { background: #fee2e2; color: #991b1b; }
+  .acao-criar       { background: #dcfce7; color: #166534; }
+  .acao-editar      { background: #fef3c7; color: #92400e; }
+  .acao-deletar     { background: #fee2e2; color: #991b1b; }
+  .acao-ver         { background: #f1f5f9; color: #475569; }
+  .acao-api         { background: #fdf4ff; color: #7e22ce; }
+  .acao-token       { background: #fff7ed; color: #c2410c; }
+  .acao-default     { background: #f1f5f9; color: #475569; }
+
+  .origem-web { color: #2563eb; font-weight: 600; }
+  .origem-api { color: #7c3aed; font-weight: 600; }
+
+  .detalhe-cell { max-width: 280px; color: var(--text-muted); font-size: 0.78rem; }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+</style>
+
+<div class="audit-wrapper">
+
+  <div class="audit-header">
+    <div>
+      <div class="audit-title">🔍 Auditoria — Logs do Sistema</div>
+      <div class="audit-sub">SGDI · Registro centralizado de eventos e ações dos usuários</div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Total de Logs</div>
+      <div class="kpi-val">{{ total_logs }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Exibindo</div>
+      <div class="kpi-val">{{ logs | length }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Tipos de Ação</div>
+      <div class="kpi-val">{{ acoes_unicas | length }}</div>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <form class="filter-card" method="GET" action="/auditoria">
+    <div>
+      <label>Ação</label>
+      <select name="acao">
+        <option value="">Todas</option>
+        {% for a in acoes_unicas %}
+          <option value="{{ a['acao'] }}" {% if filtro_acao == a['acao'] %}selected{% endif %}>{{ a['acao'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Usuário</label>
+      <input type="text" name="usuario" value="{{ filtro_usuario }}" placeholder="Nome do usuário">
+    </div>
+    <div>
+      <label>Origem</label>
+      <select name="origem">
+        <option value="">Todas</option>
+        <option value="web" {% if filtro_origem == 'web' %}selected{% endif %}>Web</option>
+        <option value="api" {% if filtro_origem == 'api' %}selected{% endif %}>API</option>
+      </select>
+    </div>
+    <div>
+      <label>Limite</label>
+      <select name="limit">
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="200">200</option>
+        <option value="500">500</option>
+      </select>
+    </div>
+    <button class="btn-filtrar" type="submit">Filtrar</button>
+    <a class="btn-limpar" href="/auditoria">Limpar</a>
+  </form>
+
+  <!-- TABELA -->
+  <div class="table-card">
+    {% if logs %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Data/Hora</th>
+          <th>Usuário</th>
+          <th>Ação</th>
+          <th>Entidade</th>
+          <th>Detalhe</th>
+          <th>IP</th>
+          <th>Origem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td style="color: var(--text-muted); font-size: 0.75rem;">{{ log['id'] }}</td>
+          <td style="white-space: nowrap; font-size: 0.78rem; color: var(--text-muted);">{{ log['criado_em'] }}</td>
+          <td style="font-weight: 600;">{{ log['usuario_nome'] or '—' }}</td>
+          <td>
+            {% set acao_lower = log['acao'] | lower %}
+            {% if 'login_falha' in acao_lower or 'negado' in acao_lower %}
+              <span class="acao-badge acao-login_falha">{{ log['acao'] }}</span>
+            {% elif 'login' in acao_lower %}
+              <span class="acao-badge acao-login">{{ log['acao'] }}</span>
+            {% elif 'logout' in acao_lower %}
+              <span class="acao-badge acao-logout">{{ log['acao'] }}</span>
+            {% elif 'criar' in acao_lower or 'cadastro' in acao_lower %}
+              <span class="acao-badge acao-criar">{{ log['acao'] }}</span>
+            {% elif 'editar' in acao_lower or 'atualizar' in acao_lower %}
+              <span class="acao-badge acao-editar">{{ log['acao'] }}</span>
+            {% elif 'deletar' in acao_lower %}
+              <span class="acao-badge acao-deletar">{{ log['acao'] }}</span>
+            {% elif 'token' in acao_lower %}
+              <span class="acao-badge acao-token">{{ log['acao'] }}</span>
+            {% elif 'api' in acao_lower %}
+              <span class="acao-badge acao-api">{{ log['acao'] }}</span>
+            {% elif 'ver' in acao_lower or 'listar' in acao_lower or 'busca' in acao_lower %}
+              <span class="acao-badge acao-ver">{{ log['acao'] }}</span>
+            {% else %}
+              <span class="acao-badge acao-default">{{ log['acao'] }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.78rem;">
+            {% if log['entidade'] %}
+              {{ log['entidade'] }}{% if log['entidade_id'] %} <span style="color:var(--text-muted)">#{{ log['entidade_id'] }}</span>{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="detalhe-cell">{{ log['detalhe'] or '—' }}</td>
+          <td style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted);">{{ log['ip'] or '—' }}</td>
+          <td>
+            {% if log['origem'] == 'api' %}
+              <span class="origem-api">API</span>
+            {% else %}
+              <span class="origem-web">Web</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state">
+        📭 Nenhum log encontrado com os filtros aplicados.
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

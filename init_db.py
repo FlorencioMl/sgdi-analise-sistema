@@ -7,6 +7,7 @@ def hash_senha(senha):
 conn = sqlite3.connect('demandas.db')
 cursor = conn.cursor()
 
+cursor.execute("DROP TABLE IF EXISTS logs")
 cursor.execute("DROP TABLE IF EXISTS api_tokens")
 cursor.execute("DROP TABLE IF EXISTS comentarios")
 cursor.execute("DROP TABLE IF EXISTS demandas")
@@ -53,12 +54,33 @@ CREATE TABLE api_tokens (
 )
 """)
 
-# Senhas agora armazenadas como SHA-256
+cursor.execute("""
+CREATE TABLE logs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id  INTEGER,
+    usuario_nome TEXT,
+    acao        TEXT NOT NULL,
+    entidade    TEXT,
+    entidade_id INTEGER,
+    detalhe     TEXT,
+    ip          TEXT,
+    user_agent  TEXT,
+    origem      TEXT DEFAULT 'web',
+    criado_em   TEXT NOT NULL
+)
+""")
+
+# Índices para consultas de auditoria
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_acao     ON logs(acao)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_usuario  ON logs(usuario_nome)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_criado   ON logs(criado_em)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_entidade ON logs(entidade, entidade_id)")
+
 usuarios = [
-    ('admin',         hash_senha('123')),
-    ('João Silva',    hash_senha('123')),
-    ('Maria Santos',  hash_senha('123')),
-    ('Pedro Costa',   hash_senha('123')),
+    ('admin',        hash_senha('123')),
+    ('João Silva',   hash_senha('123')),
+    ('Maria Santos', hash_senha('123')),
+    ('Pedro Costa',  hash_senha('123')),
 ]
 
 cursor.executemany("INSERT INTO usuarios (nome, senha) VALUES (?, ?)", usuarios)
@@ -67,5 +89,5 @@ conn.commit()
 conn.close()
 
 print("Banco criado com sucesso!")
-print("Senhas armazenadas como SHA-256.")
-print("Tabela api_tokens criada.")
+print("Tabelas: usuarios, demandas, comentarios, api_tokens, logs")
+print("Índices de auditoria criados.")

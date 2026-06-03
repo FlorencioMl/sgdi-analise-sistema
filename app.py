@@ -6,7 +6,7 @@ import secrets
 import hashlib
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)  # FIX: secret_key segura e aleatória
+app.secret_key = secrets.token_hex(32)
 
 
 # ---------------------------------------------------------------------------
@@ -20,18 +20,66 @@ def get_db():
 
 
 def hash_senha(senha):
-    """Retorna SHA-256 da senha para armazenamento seguro."""
     return hashlib.sha256(senha.encode()).hexdigest()
 
 
 def parse_data(data_str):
-    """FIX: aceita datas com ou sem microssegundos."""
     for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
         try:
             return datetime.strptime(data_str, fmt)
         except ValueError:
             continue
     return None
+
+
+# ---------------------------------------------------------------------------
+# SISTEMA DE LOGS / AUDITORIA
+# ---------------------------------------------------------------------------
+
+def registrar_log(acao, entidade=None, entidade_id=None, detalhe=None, origem='web'):
+    """
+    Registra um evento de auditoria na tabela logs.
+
+    Parâmetros:
+        acao        — ex: 'LOGIN', 'CRIAR_DEMANDA', 'DELETAR_DEMANDA'
+        entidade    — ex: 'demanda', 'usuario', 'comentario', 'token'
+        entidade_id — ID do registro afetado (opcional)
+        detalhe     — texto livre com contexto adicional
+        origem      — 'web' (sessão) ou 'api' (token)
+    """
+    try:
+        usuario_id   = session.get('usuario_id')
+        usuario_nome = session.get('usuario_nome', 'sistema')
+        ip           = request.remote_addr
+        user_agent   = request.headers.get('User-Agent', '')[:200]
+
+        # Para chamadas via API, identifica o token usado
+        if origem == 'api':
+            token_header = request.headers.get('X-API-Key', '')
+            usuario_nome = f'api:{token_header[:8]}...' if token_header else 'api'
+
+        conn = get_db()
+        conn.execute("""
+            INSERT INTO logs
+                (usuario_id, usuario_nome, acao, entidade, entidade_id,
+                 detalhe, ip, user_agent, origem, criado_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            usuario_id,
+            usuario_nome,
+            acao,
+            entidade,
+            entidade_id,
+            detalhe,
+            ip,
+            user_agent,
+            origem,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass  # log nunca deve quebrar a requisição principal
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +96,6 @@ def login_required(f):
 
 
 def api_key_required(f):
-    """Decorator de autenticação para rotas da API REST."""
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.headers.get('X-API-Key') or request.args.get('api_key')
@@ -62,6 +109,7 @@ def api_key_required(f):
         conn.close()
 
         if not registro:
+            registrar_log('API_ACESSO_NEGADO', detalhe='Token inválido ou inativo', origem='api')
             return jsonify({'erro': 'Token inválido ou inativo.'}), 403
 
         return f(*args, **kwargs)
@@ -79,8 +127,6 @@ def login():
         senha = request.form['senha']
 
         conn = get_db()
-        # Tenta login com senha hasheada primeiro; fallback para texto puro
-        # (compatibilidade com usuários criados antes do fix)
         user = conn.execute(
             "SELECT * FROM usuarios WHERE nome=? AND (senha=? OR senha=?)",
             (nome, hash_senha(senha), senha)
@@ -90,8 +136,12 @@ def login():
         if user:
             session['usuario_id']   = user['id']
             session['usuario_nome'] = user['nome']
+            registrar_log('LOGIN', entidade='usuario', entidade_id=user['id'],
+                          detalhe=f'Login bem-sucedido: {nome}')
             return redirect('/')
         else:
+            registrar_log('LOGIN_FALHA', entidade='usuario',
+                          detalhe=f'Tentativa de login falhou para: {nome}')
             flash("Login inválido")
 
     return render_template('login.html')
@@ -105,12 +155,19 @@ def cadastro():
 
         conn = get_db()
         try:
-            conn.execute(
+            cursor = conn.execute(
                 "INSERT INTO usuarios (nome, senha) VALUES (?, ?)",
-                (nome, hash_senha(senha))   # FIX: armazena hash
+                (nome, hash_senha(senha))
             )
             conn.commit()
-        except sqlite3.IntegrityError:       # FIX: captura exceção específica
+            novo_id = cursor.lastrowid
+            session['usuario_id']   = novo_id
+            session['usuario_nome'] = nome
+            registrar_log('CADASTRO_USUARIO', entidade='usuario', entidade_id=novo_id,
+                          detalhe=f'Novo usuário cadastrado: {nome}')
+        except sqlite3.IntegrityError:
+            registrar_log('CADASTRO_FALHA', entidade='usuario',
+                          detalhe=f'Tentativa de cadastro com nome duplicado: {nome}')
             flash("Usuário já existe")
             return redirect('/cadastro')
         finally:
@@ -123,6 +180,8 @@ def cadastro():
 
 @app.route('/logout')
 def logout():
+    registrar_log('LOGOUT', entidade='usuario', entidade_id=session.get('usuario_id'),
+                  detalhe=f'Logout: {session.get("usuario_nome")}')
     session.clear()
     return redirect('/login')
 
@@ -171,8 +230,8 @@ def nova_demanda():
     usuarios = conn.execute("SELECT nome FROM usuarios").fetchall()
 
     if request.method == 'POST':
-        try:                                  # FIX: garante fechamento em erro
-            conn.execute("""
+        try:
+            cursor = conn.execute("""
                 INSERT INTO demandas (titulo, descricao, solicitante, data_criacao, prioridade)
                 VALUES (?, ?, ?, ?, ?)
             """, (
@@ -183,6 +242,9 @@ def nova_demanda():
                 request.form['prioridade']
             ))
             conn.commit()
+            novo_id = cursor.lastrowid
+            registrar_log('CRIAR_DEMANDA', entidade='demanda', entidade_id=novo_id,
+                          detalhe=f'Título: {request.form["titulo"]} | Prioridade: {request.form["prioridade"]}')
         finally:
             conn.close()
         return redirect('/')
@@ -197,6 +259,9 @@ def editar(id):
     conn = get_db()
 
     if request.method == 'POST':
+        # Captura valores anteriores para o log
+        antes = conn.execute("SELECT titulo, prioridade FROM demandas WHERE id=?", (id,)).fetchone()
+
         conn.execute("""
             UPDATE demandas
             SET titulo=?, descricao=?, prioridade=?
@@ -209,6 +274,13 @@ def editar(id):
         ))
         conn.commit()
         conn.close()
+
+        detalhe = (
+            f'Antes: título="{antes["titulo"]}" prioridade={antes["prioridade"]} | '
+            f'Depois: título="{request.form["titulo"]}" prioridade={request.form["prioridade"]}'
+        ) if antes else f'Demanda {id} atualizada'
+
+        registrar_log('EDITAR_DEMANDA', entidade='demanda', entidade_id=id, detalhe=detalhe)
         return redirect('/')
 
     demanda = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
@@ -220,13 +292,19 @@ def editar(id):
     return render_template('editar.html', demanda=demanda)
 
 
-@app.route('/deletar/<int:id>', methods=['POST'])   # FIX: POST em vez de GET
+@app.route('/deletar/<int:id>', methods=['POST'])
 @login_required
 def deletar(id):
     conn = get_db()
+    demanda = conn.execute("SELECT titulo FROM demandas WHERE id=?", (id,)).fetchone()
+    titulo  = demanda['titulo'] if demanda else f'ID {id}'
+
     conn.execute("DELETE FROM demandas WHERE id=?", (id,))
     conn.commit()
     conn.close()
+
+    registrar_log('DELETAR_DEMANDA', entidade='demanda', entidade_id=id,
+                  detalhe=f'Demanda deletada: "{titulo}"')
     return redirect('/')
 
 
@@ -235,8 +313,10 @@ def deletar(id):
 def buscar():
     termo = request.args.get('q', '').strip()
 
-    if not termo:                             # FIX: termo vazio redireciona
+    if not termo:
         return redirect('/')
+
+    registrar_log('BUSCA', detalhe=f'Termo buscado: "{termo}"')
 
     conn = get_db()
     demandas = conn.execute("""
@@ -251,8 +331,8 @@ def buscar():
 @app.route('/detalhes/<int:id>')
 @login_required
 def detalhes(id):
-    conn     = get_db()
-    demanda  = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
+    conn    = get_db()
+    demanda = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
 
     if not demanda:
         conn.close()
@@ -263,7 +343,9 @@ def detalhes(id):
     ).fetchall()
     conn.close()
 
-    # FIX: parse_data aceita datas com e sem microssegundos
+    registrar_log('VER_DEMANDA', entidade='demanda', entidade_id=id,
+                  detalhe=f'Visualizou: "{demanda["titulo"]}"')
+
     dt = parse_data(demanda['data_criacao'])
     data_formatada = dt.strftime("%d/%m/%Y %H:%M") if dt else demanda['data_criacao']
 
@@ -279,7 +361,7 @@ def detalhes(id):
 @login_required
 def comentar(id):
     conn = get_db()
-    conn.execute("""
+    cursor = conn.execute("""
         INSERT INTO comentarios (demanda_id, comentario, autor, data)
         VALUES (?, ?, ?, ?)
     """, (
@@ -289,7 +371,11 @@ def comentar(id):
         datetime.now()
     ))
     conn.commit()
+    novo_id = cursor.lastrowid
     conn.close()
+
+    registrar_log('CRIAR_COMENTARIO', entidade='comentario', entidade_id=novo_id,
+                  detalhe=f'Comentário na demanda #{id}')
     return redirect(f'/detalhes/{id}')
 
 
@@ -325,10 +411,7 @@ def dashboard():
 
     por_mes = conn.execute("""
         SELECT strftime('%Y-%m', data_criacao) as mes, COUNT(*) as qtd
-        FROM demandas
-        GROUP BY mes
-        ORDER BY mes DESC
-        LIMIT 6
+        FROM demandas GROUP BY mes ORDER BY mes DESC LIMIT 6
     """).fetchall()
 
     conn.close()
@@ -344,7 +427,57 @@ def dashboard():
 
 
 # ---------------------------------------------------------------------------
-# ROTA WEB — GERAÇÃO DE TOKEN API (painel do usuário logado)
+# ROTA WEB — AUDITORIA (visualização de logs)
+# ---------------------------------------------------------------------------
+
+@app.route('/auditoria')
+@login_required
+def auditoria():
+    acao    = request.args.get('acao', '')
+    usuario = request.args.get('usuario', '')
+    origem  = request.args.get('origem', '')
+    limit   = int(request.args.get('limit', 100))
+
+    conn   = get_db()
+    query  = "SELECT * FROM logs WHERE 1=1"
+    params = []
+
+    if acao:
+        query += " AND acao LIKE ?"
+        params.append(f'%{acao}%')
+
+    if usuario:
+        query += " AND usuario_nome LIKE ?"
+        params.append(f'%{usuario}%')
+
+    if origem:
+        query += " AND origem=?"
+        params.append(origem)
+
+    query += " ORDER BY criado_em DESC LIMIT ?"
+    params.append(limit)
+
+    logs = conn.execute(query, params).fetchall()
+
+    # Contadores para o resumo
+    total_logs   = conn.execute("SELECT COUNT(*) as n FROM logs").fetchone()['n']
+    acoes_unicas = conn.execute("SELECT DISTINCT acao FROM logs ORDER BY acao").fetchall()
+    conn.close()
+
+    registrar_log('VER_AUDITORIA', detalhe=f'Consultou logs (filtros: acao={acao}, usuario={usuario})')
+
+    return render_template('auditoria.html',
+        logs=logs,
+        total_logs=total_logs,
+        acoes_unicas=acoes_unicas,
+        filtro_acao=acao,
+        filtro_usuario=usuario,
+        filtro_origem=origem
+    )
+
+
+# ---------------------------------------------------------------------------
+# ROTA WEB — TOKEN API
 # ---------------------------------------------------------------------------
 
 @app.route('/meu_token', methods=['GET', 'POST'])
@@ -366,6 +499,8 @@ def meu_token():
                 (session['usuario_id'], novo_token, datetime.now())
             )
             conn.commit()
+            registrar_log('GERAR_TOKEN_API', entidade='token',
+                          detalhe=f'Token API gerado para usuário {session["usuario_nome"]}')
             flash(f"Token gerado: {novo_token}")
 
         elif acao == 'revogar':
@@ -374,6 +509,8 @@ def meu_token():
                 (session['usuario_id'],)
             )
             conn.commit()
+            registrar_log('REVOGAR_TOKEN_API', entidade='token',
+                          detalhe=f'Token API revogado para usuário {session["usuario_nome"]}')
             flash("Token revogado com sucesso.")
 
         conn.close()
@@ -390,17 +527,11 @@ def meu_token():
 
 # ===========================================================================
 # API REST — /api/v1/
-# Autenticação: header  X-API-Key: <token>
 # ===========================================================================
 
-# ── GET /api/v1/demandas ────────────────────────────────────────────────────
 @app.route('/api/v1/demandas', methods=['GET'])
 @api_key_required
 def api_listar_demandas():
-    """
-    Lista todas as demandas.
-    Query params opcionais: prioridade, solicitante, limit (padrão 50)
-    """
     prioridade  = request.args.get('prioridade')
     solicitante = request.args.get('solicitante')
     limit       = min(int(request.args.get('limit', 50)), 200)
@@ -423,22 +554,21 @@ def api_listar_demandas():
     rows = conn.execute(query, params).fetchall()
     conn.close()
 
-    return jsonify({
-        'total': len(rows),
-        'demandas': [dict(r) for r in rows]
-    }), 200
+    registrar_log('API_LISTAR_DEMANDAS',
+                  detalhe=f'Filtros: prioridade={prioridade} solicitante={solicitante} limit={limit}',
+                  origem='api')
+    return jsonify({'total': len(rows), 'demandas': [dict(r) for r in rows]}), 200
 
 
-# ── GET /api/v1/demandas/<id> ───────────────────────────────────────────────
 @app.route('/api/v1/demandas/<int:id>', methods=['GET'])
 @api_key_required
 def api_obter_demanda(id):
-    """Retorna uma demanda pelo ID, incluindo seus comentários."""
     conn    = get_db()
     demanda = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
 
     if not demanda:
         conn.close()
+        registrar_log('API_DEMANDA_NAO_ENCONTRADA', entidade='demanda', entidade_id=id, origem='api')
         return jsonify({'erro': f'Demanda {id} não encontrada.'}), 404
 
     comentarios = conn.execute(
@@ -446,19 +576,15 @@ def api_obter_demanda(id):
     ).fetchall()
     conn.close()
 
+    registrar_log('API_VER_DEMANDA', entidade='demanda', entidade_id=id, origem='api')
     resultado = dict(demanda)
     resultado['comentarios'] = [dict(c) for c in comentarios]
     return jsonify(resultado), 200
 
 
-# ── POST /api/v1/demandas ───────────────────────────────────────────────────
 @app.route('/api/v1/demandas', methods=['POST'])
 @api_key_required
 def api_criar_demanda():
-    """
-    Cria uma nova demanda.
-    Body JSON: { titulo, descricao, solicitante, prioridade }
-    """
     dados = request.get_json()
 
     if not dados:
@@ -478,29 +604,23 @@ def api_criar_demanda():
         INSERT INTO demandas (titulo, descricao, solicitante, data_criacao, prioridade)
         VALUES (?, ?, ?, ?, ?)
     """, (
-        dados['titulo'],
-        dados['descricao'],
-        dados['solicitante'],
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        dados['prioridade']
+        dados['titulo'], dados['descricao'], dados['solicitante'],
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"), dados['prioridade']
     ))
     conn.commit()
     novo_id = cursor.lastrowid
-
     demanda = conn.execute("SELECT * FROM demandas WHERE id=?", (novo_id,)).fetchone()
     conn.close()
 
+    registrar_log('API_CRIAR_DEMANDA', entidade='demanda', entidade_id=novo_id,
+                  detalhe=f'Título: {dados["titulo"]} | Prioridade: {dados["prioridade"]}',
+                  origem='api')
     return jsonify({'mensagem': 'Demanda criada com sucesso.', 'demanda': dict(demanda)}), 201
 
 
-# ── PUT /api/v1/demandas/<id> ───────────────────────────────────────────────
 @app.route('/api/v1/demandas/<int:id>', methods=['PUT'])
 @api_key_required
 def api_atualizar_demanda(id):
-    """
-    Atualiza título, descrição e/ou prioridade de uma demanda.
-    Body JSON: { titulo?, descricao?, prioridade? }
-    """
     conn    = get_db()
     demanda = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
 
@@ -508,8 +628,7 @@ def api_atualizar_demanda(id):
         conn.close()
         return jsonify({'erro': f'Demanda {id} não encontrada.'}), 404
 
-    dados = request.get_json() or {}
-
+    dados      = request.get_json() or {}
     titulo     = dados.get('titulo',     demanda['titulo'])
     descricao  = dados.get('descricao',  demanda['descricao'])
     prioridade = dados.get('prioridade', demanda['prioridade'])
@@ -523,18 +642,17 @@ def api_atualizar_demanda(id):
         UPDATE demandas SET titulo=?, descricao=?, prioridade=? WHERE id=?
     """, (titulo, descricao, prioridade, id))
     conn.commit()
-
     atualizada = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
     conn.close()
 
+    registrar_log('API_ATUALIZAR_DEMANDA', entidade='demanda', entidade_id=id,
+                  detalhe=f'Campos atualizados: {list(dados.keys())}', origem='api')
     return jsonify({'mensagem': 'Demanda atualizada.', 'demanda': dict(atualizada)}), 200
 
 
-# ── DELETE /api/v1/demandas/<id> ────────────────────────────────────────────
 @app.route('/api/v1/demandas/<int:id>', methods=['DELETE'])
 @api_key_required
 def api_deletar_demanda(id):
-    """Deleta uma demanda e seus comentários associados."""
     conn    = get_db()
     demanda = conn.execute("SELECT * FROM demandas WHERE id=?", (id,)).fetchone()
 
@@ -542,19 +660,20 @@ def api_deletar_demanda(id):
         conn.close()
         return jsonify({'erro': f'Demanda {id} não encontrada.'}), 404
 
+    titulo = demanda['titulo']
     conn.execute("DELETE FROM comentarios WHERE demanda_id=?", (id,))
     conn.execute("DELETE FROM demandas WHERE id=?", (id,))
     conn.commit()
     conn.close()
 
+    registrar_log('API_DELETAR_DEMANDA', entidade='demanda', entidade_id=id,
+                  detalhe=f'Demanda deletada via API: "{titulo}"', origem='api')
     return jsonify({'mensagem': f'Demanda {id} deletada com sucesso.'}), 200
 
 
-# ── GET /api/v1/demandas/<id>/comentarios ───────────────────────────────────
 @app.route('/api/v1/demandas/<int:id>/comentarios', methods=['GET'])
 @api_key_required
 def api_listar_comentarios(id):
-    """Lista todos os comentários de uma demanda."""
     conn    = get_db()
     demanda = conn.execute("SELECT id FROM demandas WHERE id=?", (id,)).fetchone()
 
@@ -567,17 +686,13 @@ def api_listar_comentarios(id):
     ).fetchall()
     conn.close()
 
+    registrar_log('API_LISTAR_COMENTARIOS', entidade='demanda', entidade_id=id, origem='api')
     return jsonify({'demanda_id': id, 'comentarios': [dict(c) for c in comentarios]}), 200
 
 
-# ── POST /api/v1/demandas/<id>/comentarios ──────────────────────────────────
 @app.route('/api/v1/demandas/<int:id>/comentarios', methods=['POST'])
 @api_key_required
 def api_criar_comentario(id):
-    """
-    Adiciona um comentário a uma demanda.
-    Body JSON: { comentario, autor }
-    """
     conn    = get_db()
     demanda = conn.execute("SELECT id FROM demandas WHERE id=?", (id,)).fetchone()
 
@@ -598,14 +713,14 @@ def api_criar_comentario(id):
     novo = conn.execute("SELECT * FROM comentarios WHERE id=?", (cursor.lastrowid,)).fetchone()
     conn.close()
 
+    registrar_log('API_CRIAR_COMENTARIO', entidade='comentario', entidade_id=cursor.lastrowid,
+                  detalhe=f'Comentário na demanda #{id} por {dados["autor"]}', origem='api')
     return jsonify({'mensagem': 'Comentário adicionado.', 'comentario': dict(novo)}), 201
 
 
-# ── GET /api/v1/stats ───────────────────────────────────────────────────────
 @app.route('/api/v1/stats', methods=['GET'])
 @api_key_required
 def api_stats():
-    """Retorna os indicadores gerenciais do SGDI."""
     conn = get_db()
 
     total = conn.execute('SELECT COUNT(*) as n FROM demandas').fetchone()['n']
@@ -617,28 +732,59 @@ def api_stats():
         ).fetchall()
     }
 
-    por_mes = [
-        dict(r) for r in conn.execute("""
-            SELECT strftime('%Y-%m', data_criacao) as mes, COUNT(*) as qtd
-            FROM demandas GROUP BY mes ORDER BY mes DESC LIMIT 6
-        """).fetchall()
-    ]
+    por_mes = [dict(r) for r in conn.execute("""
+        SELECT strftime('%Y-%m', data_criacao) as mes, COUNT(*) as qtd
+        FROM demandas GROUP BY mes ORDER BY mes DESC LIMIT 6
+    """).fetchall()]
 
-    top_solicitantes = [
-        dict(r) for r in conn.execute("""
-            SELECT solicitante, COUNT(*) as qtd FROM demandas
-            GROUP BY solicitante ORDER BY qtd DESC LIMIT 5
-        """).fetchall()
-    ]
+    top_solicitantes = [dict(r) for r in conn.execute("""
+        SELECT solicitante, COUNT(*) as qtd FROM demandas
+        GROUP BY solicitante ORDER BY qtd DESC LIMIT 5
+    """).fetchall()]
 
     conn.close()
 
+    registrar_log('API_STATS', detalhe='Consulta de indicadores gerenciais', origem='api')
     return jsonify({
         'total_demandas':   total,
         'por_prioridade':   por_prioridade,
         'por_mes':          por_mes,
         'top_solicitantes': top_solicitantes
     }), 200
+
+
+# ── GET /api/v1/logs ─────────────────────────────────────────────────────────
+@app.route('/api/v1/logs', methods=['GET'])
+@api_key_required
+def api_logs():
+    """Retorna os logs de auditoria. Params: acao, usuario, origem, limit (máx 500)."""
+    acao    = request.args.get('acao', '')
+    usuario = request.args.get('usuario', '')
+    origem  = request.args.get('origem', '')
+    limit   = min(int(request.args.get('limit', 100)), 500)
+
+    conn   = get_db()
+    query  = "SELECT * FROM logs WHERE 1=1"
+    params = []
+
+    if acao:
+        query += " AND acao LIKE ?"
+        params.append(f'%{acao}%')
+    if usuario:
+        query += " AND usuario_nome LIKE ?"
+        params.append(f'%{usuario}%')
+    if origem:
+        query += " AND origem=?"
+        params.append(origem)
+
+    query += " ORDER BY criado_em DESC LIMIT ?"
+    params.append(limit)
+
+    logs = conn.execute(query, params).fetchall()
+    conn.close()
+
+    registrar_log('API_CONSULTAR_LOGS', detalhe=f'Consulta de logs via API', origem='api')
+    return jsonify({'total': len(logs), 'logs': [dict(l) for l in logs]}), 200
 
 
 # ---------------------------------------------------------------------------
