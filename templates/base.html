@@ -22,7 +22,34 @@
                 <input type="text" name="q" placeholder="Buscar...">
             </form>
 
-            <span>👤 {{ session.usuario_nome }}</span>
+            <!-- FIX: nome do usuário dentro de um badge com ícone -->
+            <span style="
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: #fff;
+                color: #1a202c;
+                font-size: 0.82rem;
+                font-weight: 600;
+                padding: 0.3rem 0.75rem;
+                border-radius: 999px;
+                border: 1px solid #e2e8f0;
+                white-space: nowrap;
+            ">
+                <span style="
+                    width: 24px;
+                    height: 24px;
+                    background: #7c3aed;
+                    border-radius: 50%;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.75rem;
+                    color: #fff;
+                    flex-shrink: 0;
+                ">👤</span>
+                {{ session.usuario_nome }}
+            </span>
         {% else %}
             <a href="/login">Login</a>
             <a href="/cadastro">Cadastro</a>

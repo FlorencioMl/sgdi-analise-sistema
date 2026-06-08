@@ -18,15 +18,8 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
   }
 
-  .audit-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.75rem;
-  }
-
   .audit-title { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
-  .audit-sub   { font-size: 0.83rem; color: var(--text-muted); margin-top: 2px; }
+  .audit-sub   { font-size: 0.83rem; color: var(--text-muted); margin-top: 2px; margin-bottom: 1.75rem; }
 
   .kpi-row {
     display: grid;
@@ -46,30 +39,49 @@
   .kpi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
   .kpi-val   { font-size: 1.9rem; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
 
-  /* FILTROS */
+  /* FIX: filtros em grid de 4 colunas iguais + botões alinhados */
   .filter-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 12px;
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.5rem;
-    display: flex;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto auto;
     gap: 0.75rem;
-    flex-wrap: wrap;
     align-items: flex-end;
   }
 
-  .filter-card label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); display: block; margin-bottom: 4px; }
+  @media (max-width: 900px) {
+    .filter-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
 
-  .filter-card input,
-  .filter-card select {
+  .filter-field label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .filter-field input,
+  .filter-field select {
+    width: 100%;
+    box-sizing: border-box;
     border: 1px solid #cbd5e1;
     border-radius: 7px;
     padding: 0.45rem 0.75rem;
     font-size: 0.82rem;
     color: var(--text-primary);
     background: #f8fafc;
-    min-width: 140px;
+    height: 36px;
   }
 
   .btn-filtrar {
@@ -77,10 +89,12 @@
     color: #fff;
     border: none;
     border-radius: 7px;
-    padding: 0.5rem 1.25rem;
+    padding: 0 1.25rem;
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
+    height: 36px;
+    white-space: nowrap;
   }
 
   .btn-limpar {
@@ -88,14 +102,16 @@
     color: var(--text-muted);
     border: 1px solid #cbd5e1;
     border-radius: 7px;
-    padding: 0.5rem 1rem;
+    padding: 0 1rem;
     font-size: 0.82rem;
     cursor: pointer;
     text-decoration: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    white-space: nowrap;
   }
 
-  /* TABELA */
   .table-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -103,11 +119,7 @@
     overflow: hidden;
   }
 
-  .table-card table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.815rem;
-  }
+  .table-card table { width: 100%; border-collapse: collapse; font-size: 0.815rem; }
 
   .table-card th {
     font-size: 0.7rem;
@@ -141,7 +153,6 @@
     white-space: nowrap;
   }
 
-  /* cores por grupo de ação */
   .acao-login       { background: #dbeafe; color: #1e40af; }
   .acao-logout      { background: #e0e7ff; color: #3730a3; }
   .acao-login_falha { background: #fee2e2; color: #991b1b; }
@@ -155,25 +166,14 @@
 
   .origem-web { color: #2563eb; font-weight: 600; }
   .origem-api { color: #7c3aed; font-weight: 600; }
-
   .detalhe-cell { max-width: 280px; color: var(--text-muted); font-size: 0.78rem; }
-
-  .empty-state {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
+  .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.9rem; }
 </style>
 
 <div class="audit-wrapper">
 
-  <div class="audit-header">
-    <div>
-      <div class="audit-title">🔍 Auditoria — Logs do Sistema</div>
-      <div class="audit-sub">SGDI · Registro centralizado de eventos e ações dos usuários</div>
-    </div>
-  </div>
+  <div class="audit-title">🔍 Auditoria — Logs do Sistema</div>
+  <div class="audit-sub">SGDI · Registro centralizado de eventos e ações dos usuários</div>
 
   <!-- KPIs -->
   <div class="kpi-row">
@@ -191,40 +191,46 @@
     </div>
   </div>
 
-  <!-- FILTROS -->
+  <!-- FIX: filtros em grid alinhado -->
   <form class="filter-card" method="GET" action="/auditoria">
-    <div>
-      <label>Ação</label>
-      <select name="acao">
-        <option value="">Todas</option>
-        {% for a in acoes_unicas %}
-          <option value="{{ a['acao'] }}" {% if filtro_acao == a['acao'] %}selected{% endif %}>{{ a['acao'] }}</option>
-        {% endfor %}
-      </select>
+    <div class="filter-grid">
+      <div class="filter-field">
+        <label>Ação</label>
+        <select name="acao">
+          <option value="">Todas</option>
+          {% for a in acoes_unicas %}
+            <option value="{{ a['acao'] }}" {% if filtro_acao == a['acao'] %}selected{% endif %}>{{ a['acao'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Usuário</label>
+        <input type="text" name="usuario" value="{{ filtro_usuario }}" placeholder="Nome do usuário">
+      </div>
+
+      <div class="filter-field">
+        <label>Origem</label>
+        <select name="origem">
+          <option value="">Todas</option>
+          <option value="web" {% if filtro_origem == 'web' %}selected{% endif %}>Web</option>
+          <option value="api" {% if filtro_origem == 'api' %}selected{% endif %}>API</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Limite</label>
+        <select name="limit">
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
+      </div>
+
+      <button class="btn-filtrar" type="submit">Filtrar</button>
+      <a class="btn-limpar" href="/auditoria">Limpar</a>
     </div>
-    <div>
-      <label>Usuário</label>
-      <input type="text" name="usuario" value="{{ filtro_usuario }}" placeholder="Nome do usuário">
-    </div>
-    <div>
-      <label>Origem</label>
-      <select name="origem">
-        <option value="">Todas</option>
-        <option value="web" {% if filtro_origem == 'web' %}selected{% endif %}>Web</option>
-        <option value="api" {% if filtro_origem == 'api' %}selected{% endif %}>API</option>
-      </select>
-    </div>
-    <div>
-      <label>Limite</label>
-      <select name="limit">
-        <option value="50">50</option>
-        <option value="100" selected>100</option>
-        <option value="200">200</option>
-        <option value="500">500</option>
-      </select>
-    </div>
-    <button class="btn-filtrar" type="submit">Filtrar</button>
-    <a class="btn-limpar" href="/auditoria">Limpar</a>
   </form>
 
   <!-- TABELA -->
@@ -292,9 +298,7 @@
       </tbody>
     </table>
     {% else %}
-      <div class="empty-state">
-        📭 Nenhum log encontrado com os filtros aplicados.
-      </div>
+      <div class="empty-state">📭 Nenhum log encontrado com os filtros aplicados.</div>
     {% endif %}
   </div>
 

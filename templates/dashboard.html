@@ -9,7 +9,6 @@
     --text-primary: #1a202c;
     --text-muted: #64748b;
     --accent-purple: #7c3aed;
-    --accent-purple-light: #ede9fe;
     --alta: #ef4444;
     --media: #f59e0b;
     --baixa: #22c55e;
@@ -29,17 +28,8 @@
     margin-bottom: 2rem;
   }
 
-  .dash-title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .dash-subtitle {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
+  .dash-title { font-size: 1.6rem; font-weight: 700; color: var(--text-primary); }
+  .dash-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
 
   .dash-badge {
     background: var(--accent-purple);
@@ -51,7 +41,6 @@
     letter-spacing: 0.05em;
   }
 
-  /* KPI CARDS */
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -98,13 +87,11 @@
 
   .kpi-icon {
     position: absolute;
-    bottom: 12px;
-    right: 16px;
+    bottom: 12px; right: 16px;
     font-size: 2.2rem;
     opacity: 0.08;
   }
 
-  /* CHARTS GRID */
   .charts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -133,7 +120,6 @@
     margin-bottom: 1rem;
   }
 
-  /* RECENT TABLE */
   .table-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -142,11 +128,7 @@
     margin-bottom: 1.75rem;
   }
 
-  .table-card table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-  }
+  .table-card table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 
   .table-card th {
     font-size: 0.72rem;
@@ -179,50 +161,15 @@
   .badge-media { background: #fef3c7; color: #92400e; }
   .badge-baixa { background: #dcfce7; color: #166534; }
 
-  /* SOLICITANTES */
-  .bar-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 0.75rem;
-  }
-
-  .bar-label {
-    font-size: 0.8rem;
-    color: var(--text-primary);
-    width: 130px;
-    flex-shrink: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .bar-track {
-    flex: 1;
-    background: #f1f5f9;
-    border-radius: 999px;
-    height: 8px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #7c3aed, #a855f7);
-    border-radius: 999px;
-  }
-
-  .bar-count {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    width: 24px;
-    text-align: right;
-  }
+  .bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem; }
+  .bar-label { font-size: 0.8rem; color: var(--text-primary); width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #f1f5f9; border-radius: 999px; height: 8px; overflow: hidden; }
+  .bar-fill  { height: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); border-radius: 999px; }
+  .bar-count { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); width: 24px; text-align: right; }
 </style>
 
 <div class="dash-wrapper">
 
-  <!-- HEADER -->
   <div class="dash-header">
     <div>
       <div class="dash-title">📊 Painel Gerencial</div>
@@ -231,9 +178,9 @@
     <span class="dash-badge">DADOS REAIS</span>
   </div>
 
-  <!-- KPI CARDS -->
+  <!-- FIX: compara com 'Media' (sem acento) que é o valor salvo no banco -->
   {% set total_alta  = por_prioridade | selectattr('prioridade', 'equalto', 'Alta')  | map(attribute='qtd') | list | sum %}
-  {% set total_media = por_prioridade | selectattr('prioridade', 'equalto', 'Média') | map(attribute='qtd') | list | sum %}
+  {% set total_media = por_prioridade | selectattr('prioridade', 'equalto', 'Media') | map(attribute='qtd') | list | sum %}
   {% set total_baixa = por_prioridade | selectattr('prioridade', 'equalto', 'Baixa') | map(attribute='qtd') | list | sum %}
 
   <div class="kpi-grid">
@@ -259,33 +206,26 @@
     </div>
   </div>
 
-  <!-- CHARTS -->
   <div class="charts-grid">
-
-    <!-- Gráfico de barras: demandas por mês -->
     <div class="chart-card">
       <div class="chart-card-title">📅 Demandas por Mês</div>
       <div style="position: relative; height: 220px;">
-        <canvas id="chartMes" role="img" aria-label="Gráfico de demandas por mês">Demandas agrupadas por mês.</canvas>
+        <canvas id="chartMes"></canvas>
       </div>
     </div>
 
-    <!-- Gráfico de pizza: prioridades -->
     <div class="chart-card">
       <div class="chart-card-title">🎯 Distribuição por Prioridade</div>
       <div style="display: flex; align-items: center; gap: 1.5rem;">
         <div style="position: relative; height: 200px; width: 200px; flex-shrink: 0;">
-          <canvas id="chartPrioridade" role="img" aria-label="Gráfico de distribuição por prioridade">Demandas por prioridade.</canvas>
+          <canvas id="chartPrioridade"></canvas>
         </div>
         <div id="legendPrioridade" style="font-size: 0.8rem; color: var(--text-muted);"></div>
       </div>
     </div>
   </div>
 
-  <!-- SOLICITANTES + RECENTES -->
   <div class="charts-grid">
-
-    <!-- Top solicitantes -->
     <div class="chart-card">
       <div class="chart-card-title">👤 Top Solicitantes</div>
       {% if por_solicitante %}
@@ -304,12 +244,11 @@
       {% endif %}
     </div>
 
-    <!-- Status (se existir) -->
     {% if por_status %}
     <div class="chart-card">
       <div class="chart-card-title">📌 Demandas por Status</div>
       <div style="position: relative; height: {{ [por_status|length * 40 + 80, 200]|max }}px;">
-        <canvas id="chartStatus" role="img" aria-label="Gráfico de demandas por status">Demandas agrupadas por status.</canvas>
+        <canvas id="chartStatus"></canvas>
       </div>
     </div>
     {% else %}
@@ -321,19 +260,13 @@
     {% endif %}
   </div>
 
-  <!-- TABELA RECENTES -->
   <div class="table-card">
     <div class="chart-card-title" style="margin-bottom: 1rem;">🕐 Últimas Demandas Registradas</div>
     {% if recentes %}
     <table>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Título</th>
-          <th>Solicitante</th>
-          <th>Data</th>
-          <th>Prioridade</th>
-          <th>Ação</th>
+          <th>ID</th><th>Título</th><th>Solicitante</th><th>Data</th><th>Prioridade</th><th>Ação</th>
         </tr>
       </thead>
       <tbody>
@@ -344,9 +277,9 @@
           <td>{{ d['solicitante'] }}</td>
           <td style="color: var(--text-muted); font-size: 0.8rem;">{{ d['data_criacao'] }}</td>
           <td>
-            <span class="badge-prioridade badge-{{ d['prioridade'] | lower | replace('é','e') }}">
-              {{ d['prioridade'] }}
-            </span>
+            {# FIX: normaliza para minúsculo sem acento para bater com as classes CSS #}
+            {% set p = d['prioridade'] | lower | replace('é','e') %}
+            <span class="badge-prioridade badge-{{ p }}">{{ d['prioridade'] }}</span>
           </td>
           <td>
             <a href="{{ url_for('detalhes', id=d['id']) }}" style="color: #7c3aed; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Ver →</a>
@@ -362,20 +295,16 @@
 
 </div>
 
-<!-- CHARTS JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-  // --- Gráfico: Demandas por Mês ---
-  const mesesLabels = {{ por_mes | map(attribute='mes') | list | tojson }};
-  const mesesData   = {{ por_mes | map(attribute='qtd')  | list | tojson }};
-
+  // Demandas por Mês
   new Chart(document.getElementById('chartMes'), {
     type: 'bar',
     data: {
-      labels: mesesLabels,
+      labels: {{ por_mes | map(attribute='mes') | list | tojson }},
       datasets: [{
         label: 'Demandas',
-        data: mesesData,
+        data: {{ por_mes | map(attribute='qtd') | list | tojson }},
         backgroundColor: '#7c3aed',
         borderRadius: 6,
         borderSkipped: false,
@@ -392,12 +321,13 @@
     }
   });
 
-  // --- Gráfico: Prioridade (Donut) ---
+  // Prioridade (Donut)
+  // FIX: trata 'Media' e 'Média' como amarelo
   const priorLabels = {{ por_prioridade | map(attribute='prioridade') | list | tojson }};
-  const priorData   = {{ por_prioridade | map(attribute='qtd')        | list | tojson }};
+  const priorData   = {{ por_prioridade | map(attribute='qtd') | list | tojson }};
   const priorColors = priorLabels.map(l => {
-    if (l === 'Alta')  return '#ef4444';
-    if (l === 'Média' || l === 'Media') return '#f59e0b';
+    if (l === 'Alta')                   return '#ef4444';
+    if (l === 'Media' || l === 'Média') return '#f59e0b';
     return '#22c55e';
   });
 
@@ -405,12 +335,7 @@
     type: 'doughnut',
     data: {
       labels: priorLabels,
-      datasets: [{
-        data: priorData,
-        backgroundColor: priorColors,
-        borderWidth: 2,
-        borderColor: '#fff',
-      }]
+      datasets: [{ data: priorData, backgroundColor: priorColors, borderWidth: 2, borderColor: '#fff' }]
     },
     options: {
       responsive: true,
@@ -420,28 +345,25 @@
     }
   });
 
-  // Legenda manual
   const legendEl = document.getElementById('legendPrioridade');
   priorLabels.forEach((label, i) => {
+    // FIX: exibe 'Média' na legenda mesmo quando o banco tem 'Media'
+    const display = (label === 'Media') ? 'Média' : label;
     legendEl.innerHTML += `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
         <span style="width:10px;height:10px;border-radius:2px;background:${priorColors[i]};display:inline-block;"></span>
-        <span>${label}: <strong>${priorData[i]}</strong></span>
+        <span>${display}: <strong>${priorData[i]}</strong></span>
       </div>`;
   });
 
-  // --- Gráfico: Status (horizontal bar) ---
   {% if por_status %}
-  const statusLabels = {{ por_status | map(attribute='status') | list | tojson }};
-  const statusData   = {{ por_status | map(attribute='qtd')    | list | tojson }};
-
   new Chart(document.getElementById('chartStatus'), {
     type: 'bar',
     data: {
-      labels: statusLabels,
+      labels: {{ por_status | map(attribute='status') | list | tojson }},
       datasets: [{
         label: 'Qtd',
-        data: statusData,
+        data: {{ por_status | map(attribute='qtd') | list | tojson }},
         backgroundColor: '#a855f7',
         borderRadius: 6,
         borderSkipped: false,

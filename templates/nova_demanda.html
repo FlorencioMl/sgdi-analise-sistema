@@ -2,6 +2,45 @@
 
 {% block content %}
 
+<style>
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  /* FIX: btn-secondary como botão real para alinhar com btn-primary */
+  .form-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 1.25rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
+  .form-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 1.25rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    box-sizing: border-box;
+  }
+</style>
+
 <div class="form-card">
     <h2>Nova Demanda</h2>
 
@@ -18,7 +57,6 @@
         </div>
 
         <div class="form-row">
-
             <div class="form-group">
                 <label>Solicitante</label>
                 <select name="solicitante">
@@ -36,7 +74,6 @@
                     <option value="Baixa">Baixa</option>
                 </select>
             </div>
-
         </div>
 
         <div class="form-actions">
@@ -44,7 +81,6 @@
                 onclick="this.innerText='Salvando...'">
                 Salvar
             </button>
-
             <a href="/" class="btn-secondary">Cancelar</a>
         </div>
 

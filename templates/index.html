@@ -6,22 +6,19 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h2>Lista de Demandas</h2>
-
         <a href="/nova_demanda" class="btn-primary">+ Nova Demanda</a>
     </div>
 
     <!-- FILTRO -->
     <form method="GET" action="/" class="filtro-form">
-    <label>Filtrar:</label>
-
-    <select name="prioridade">
-        <option value="Todas">Todas</option>
-        <option value="Alta">Alta</option>
-        <option value="Media">Média</option>
-        <option value="Baixa">Baixa</option>
-    </select>
-
-    <button type="submit">Filtrar</button>
+        <label>Filtrar:</label>
+        <select name="prioridade">
+            <option value="Todas">Todas</option>
+            <option value="Alta">Alta</option>
+            <option value="Media">Média</option>
+            <option value="Baixa">Baixa</option>
+        </select>
+        <button type="submit">Filtrar</button>
     </form>
 
     <!-- TABELA -->
@@ -43,7 +40,21 @@
             <td>{{ demanda[0] }}</td>
             <td>{{ demanda[1] }}</td>
             <td>{{ demanda[3] }}</td>
-            <td>{{ demanda[4] }}</td>
+
+            {# FIX: formata data — remove microssegundos, exibe só dd/mm/yyyy HH:MM #}
+            <td>
+                {% set data_raw = demanda[4] | string %}
+                {% if '.' in data_raw %}
+                    {% set data_raw = data_raw.split('.')[0] %}
+                {% endif %}
+                {% if '-' in data_raw and ':' in data_raw %}
+                    {% set partes = data_raw.split(' ') %}
+                    {% set ymd = partes[0].split('-') %}
+                    {{ ymd[2] }}/{{ ymd[1] }}/{{ ymd[0] }} {{ partes[1][:5] }}
+                {% else %}
+                    {{ data_raw }}
+                {% endif %}
+            </td>
 
             <td>
                 <span class="
@@ -56,12 +67,10 @@
                 </span>
             </td>
 
-            <!-- 🔥 AÇÕES ATUALIZADAS -->
             <td class="acoes">
                 <a href="/detalhes/{{ demanda[0] }}" class="btn-link">Ver</a>
                 <a href="/editar/{{ demanda[0] }}" class="btn-outline">Editar</a>
             </td>
-
         </tr>
         {% endfor %}
         </tbody>
